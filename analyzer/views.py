@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.conf import settings
 
+
 @csrf_exempt
 @require_POST
 def upload_chunk(request):
@@ -16,7 +17,7 @@ def upload_chunk(request):
         chunk_index = int(request.POST.get('chunk_index'))
         total_chunks = int(request.POST.get('total_chunks'))
 
-        # Validate upload_id to avoid directory traversal
+        # Validate upload_id to prevent directory traversal
         if not re.match(r'^[a-zA-Z0-9_-]+$', upload_id):
             return JsonResponse({'error': 'Invalid upload_id'}, status=400)
 
@@ -28,7 +29,7 @@ def upload_chunk(request):
             for c in chunk.chunks():
                 f.write(c)
 
-        # Check if all chunks are uploaded
+        # Check if all chunks have been received
         all_received = all(
             os.path.exists(os.path.join(temp_dir, f"chunk_{i}"))
             for i in range(total_chunks)
@@ -42,7 +43,7 @@ def upload_chunk(request):
                     with open(chunk_file, 'rb') as infile:
                         outfile.write(infile.read())
 
-            # Cleanup
+            # Cleanup temporary chunks
             for i in range(total_chunks):
                 os.remove(os.path.join(temp_dir, f"chunk_{i}"))
             os.rmdir(temp_dir)
@@ -68,15 +69,15 @@ def generate_analysis(request):
         if not os.path.exists(video_path):
             return JsonResponse({'error': 'Video file not found'}, status=404)
 
-        # Optional: generate result file path based on upload_id
         result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', f'{upload_id}_analysis.txt')
+        python_executable = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'venv', 'bin', 'python3')
 
         command = [
-            'python3', 'main.py',
+            python_executable, 'main.py',
             '--mode', 'video',
             '--video', video_path,
             '--confidence', '0.5',
-            '--output', result_file  # Add this to your script if needed
+            '--output', result_file
         ]
 
         result = subprocess.run(
