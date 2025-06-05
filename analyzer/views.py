@@ -19,7 +19,7 @@ def generate_analysis(request):
         temp_video_path = temp_video.name
 
     try:
-        subprocess.run(
+        result = subprocess.run(
             ['python', 'main.py', '--mode', 'video', '--video', temp_video_path, '--confidence', '0.5'],
             cwd=settings.VIDEO_ANALYSIS_SCRIPT_DIR,
             capture_output=True,
@@ -28,7 +28,11 @@ def generate_analysis(request):
             errors='ignore'
         )
 
-        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'video_safety_analysis.txt')
+        # print("Return Code:", result.returncode)
+        # print("STDOUT:\n", result.stdout)
+        # print("STDERR:\n", result.stderr)
+
+        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results','video_safety_analysis.txt')
         if os.path.exists(result_file):
             with open(result_file, 'r', encoding='utf-8', errors='ignore') as f:
                 result_text = f.read()
