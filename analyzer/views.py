@@ -56,12 +56,13 @@ def upload_chunk(request):
 
 @csrf_exempt
 @require_POST
+@csrf_exempt
+@require_POST
 def generate_analysis(request):
     try:
         data = json.loads(request.body)
         upload_id = data.get('upload_id')
 
-        # Validate upload_id
         if not upload_id or not re.match(r'^[a-zA-Z0-9_-]+$', upload_id):
             return JsonResponse({'error': 'Invalid or missing upload_id'}, status=400)
 
@@ -70,6 +71,12 @@ def generate_analysis(request):
             return JsonResponse({'error': 'Video file not found'}, status=404)
 
         result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', f'{upload_id}_analysis.txt')
+
+        # Create parent directory of result_file if missing
+        output_dir = os.path.dirname(result_file)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
         python_executable = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'venv', 'bin', 'python3')
 
         command = [
