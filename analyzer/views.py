@@ -1,6 +1,7 @@
 import os
-import subprocess
+import re
 import json
+import subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -9,33 +10,48 @@ from django.conf import settings
 @csrf_exempt
 @require_POST
 def upload_chunk(request):
-    chunk = request.FILES.get('chunk')
-    upload_id = request.POST.get('upload_id')
-    chunk_index = int(request.POST.get('chunk_index'))
-    total_chunks = int(request.POST.get('total_chunks'))
-    
-    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
-    os.makedirs(temp_dir, exist_ok=True)
-    chunk_path = os.path.join(temp_dir, f"chunk_{chunk_index}")
+    try:
+        chunk = request.FILES.get('chunk')
+        upload_id = request.POST.get('upload_id')
+        chunk_index = int(request.POST.get('chunk_index'))
+        total_chunks = int(request.POST.get('total_chunks'))
 
-    with open(chunk_path, 'wb') as f:
-        for c in chunk.chunks():
-            f.write(c)
+        # Validate upload_id to avoid directory traversal
+        if not re.match(r'^[a-zA-Z0-9_-]+$', upload_id):
+            return JsonResponse({'error': 'Invalid upload_id'}, status=400)
 
-    # After receiving all chunks, assemble them into final file
-    if chunk_index + 1 == total_chunks:
-        final_path = os.path.join(settings.MEDIA_ROOT, f"{upload_id}.mp4")
-        with open(final_path, 'wb') as outfile:
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
+        os.makedirs(temp_dir, exist_ok=True)
+        chunk_path = os.path.join(temp_dir, f"chunk_{chunk_index}")
+
+        with open(chunk_path, 'wb') as f:
+            for c in chunk.chunks():
+                f.write(c)
+
+        # Check if all chunks are uploaded
+        all_received = all(
+            os.path.exists(os.path.join(temp_dir, f"chunk_{i}"))
+            for i in range(total_chunks)
+        )
+
+        if all_received:
+            final_path = os.path.join(settings.MEDIA_ROOT, f"{upload_id}.mp4")
+            with open(final_path, 'wb') as outfile:
+                for i in range(total_chunks):
+                    chunk_file = os.path.join(temp_dir, f"chunk_{i}")
+                    with open(chunk_file, 'rb') as infile:
+                        outfile.write(infile.read())
+
+            # Cleanup
             for i in range(total_chunks):
-                chunk_file = os.path.join(temp_dir, f"chunk_{i}")
-                with open(chunk_file, 'rb') as infile:
-                    outfile.write(infile.read())
-        # Cleanup chunks
-        for i in range(total_chunks):
-            os.remove(os.path.join(temp_dir, f"chunk_{i}"))
-        os.rmdir(temp_dir)
+                os.remove(os.path.join(temp_dir, f"chunk_{i}"))
+            os.rmdir(temp_dir)
 
-    return JsonResponse({'status': 'chunk received', 'chunk_index': chunk_index})
+        return JsonResponse({'status': 'chunk received', 'chunk_index': chunk_index})
+
+    except Exception as e:
+        return JsonResponse({'error': f'Upload failed: {str(e)}'}, status=500)
+
 
 @csrf_exempt
 @require_POST
@@ -43,15 +59,28 @@ def generate_analysis(request):
     try:
         data = json.loads(request.body)
         upload_id = data.get('upload_id')
-        if not upload_id:
-            return JsonResponse({'error': 'upload_id not provided'}, status=400)
+
+        # Validate upload_id
+        if not upload_id or not re.match(r'^[a-zA-Z0-9_-]+$', upload_id):
+            return JsonResponse({'error': 'Invalid or missing upload_id'}, status=400)
 
         video_path = os.path.join(settings.MEDIA_ROOT, f"{upload_id}.mp4")
         if not os.path.exists(video_path):
             return JsonResponse({'error': 'Video file not found'}, status=404)
 
+        # Optional: generate result file path based on upload_id
+        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', f'{upload_id}_analysis.txt')
+
+        command = [
+            'python3', 'main.py',
+            '--mode', 'video',
+            '--video', video_path,
+            '--confidence', '0.5',
+            '--output', result_file  # Add this to your script if needed
+        ]
+
         result = subprocess.run(
-            ['python3', 'main.py', '--mode', 'video', '--video', video_path, '--confidence', '0.5'],
+            command,
             cwd=settings.VIDEO_ANALYSIS_SCRIPT_DIR,
             capture_output=True,
             text=True,
@@ -59,7 +88,12 @@ def generate_analysis(request):
             errors='ignore'
         )
 
-        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', 'video_safety_analysis.txt')
+        if result.returncode != 0:
+            return JsonResponse({
+                'error': 'Video analysis failed',
+                'stderr': result.stderr
+            }, status=500)
+
         if os.path.exists(result_file):
             with open(result_file, 'r', encoding='utf-8', errors='ignore') as f:
                 result_text = f.read()
