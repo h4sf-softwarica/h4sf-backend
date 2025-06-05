@@ -58,6 +58,8 @@ def upload_chunk(request):
 @require_POST
 @csrf_exempt
 @require_POST
+@csrf_exempt
+@require_POST
 def generate_analysis(request):
     try:
         data = json.loads(request.body)
@@ -70,12 +72,9 @@ def generate_analysis(request):
         if not os.path.exists(video_path):
             return JsonResponse({'error': 'Video file not found'}, status=404)
 
-        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', f'{upload_id}_analysis.txt')
-
-        # Create parent directory of result_file if missing
-        output_dir = os.path.dirname(result_file)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
+        # Define output directory (not file)
+        output_dir = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results')
+        os.makedirs(output_dir, exist_ok=True)
 
         python_executable = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'venv', 'bin', 'python3')
 
@@ -84,7 +83,7 @@ def generate_analysis(request):
             '--mode', 'video',
             '--video', video_path,
             '--confidence', '0.5',
-            '--output', result_file
+            '--output', output_dir  # pass directory here, not a file
         ]
 
         result = subprocess.run(
@@ -101,6 +100,9 @@ def generate_analysis(request):
                 'error': 'Video analysis failed',
                 'stderr': result.stderr
             }, status=500)
+
+        # Now read the actual result file from the output directory
+        result_file = os.path.join(output_dir, f'{upload_id}_analysis.txt')
 
         if os.path.exists(result_file):
             with open(result_file, 'r', encoding='utf-8', errors='ignore') as f:
