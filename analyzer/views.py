@@ -60,6 +60,8 @@ def upload_chunk(request):
 @require_POST
 @csrf_exempt
 @require_POST
+@csrf_exempt
+@require_POST
 def generate_analysis(request):
     try:
         data = json.loads(request.body)
@@ -68,22 +70,24 @@ def generate_analysis(request):
         if not upload_id or not re.match(r'^[a-zA-Z0-9_-]+$', upload_id):
             return JsonResponse({'error': 'Invalid or missing upload_id'}, status=400)
 
+        # Path to uploaded video
         video_path = os.path.join(settings.MEDIA_ROOT, f"{upload_id}.mp4")
         if not os.path.exists(video_path):
             return JsonResponse({'error': 'Video file not found'}, status=404)
 
-        # Define output directory (not file)
-        output_dir = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results')
-        os.makedirs(output_dir, exist_ok=True)
+        # This is the fixed output file your main.py will write to
+        result_file = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'test_results', 'video_safety_analysis.txt')
 
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(result_file), exist_ok=True)
+
+        # Run main.py with arguments
         python_executable = os.path.join(settings.VIDEO_ANALYSIS_SCRIPT_DIR, 'venv', 'bin', 'python3')
-
         command = [
             python_executable, 'main.py',
             '--mode', 'video',
             '--video', video_path,
-            '--confidence', '0.5',
-            '--output', output_dir  # pass directory here, not a file
+            '--confidence', '0.5'
         ]
 
         result = subprocess.run(
@@ -101,14 +105,12 @@ def generate_analysis(request):
                 'stderr': result.stderr
             }, status=500)
 
-        # Now read the actual result file from the output directory
-        result_file = os.path.join(output_dir, f'{upload_id}_analysis.txt')
-
+        # Read the fixed output file content
         if os.path.exists(result_file):
             with open(result_file, 'r', encoding='utf-8', errors='ignore') as f:
                 result_text = f.read()
         else:
-            result_text = 'Analysis result file not found.'
+            return JsonResponse({'error': 'Analysis file not found'}, status=500)
 
         return JsonResponse({'result': result_text})
 
