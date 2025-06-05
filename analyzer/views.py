@@ -20,7 +20,7 @@ def generate_analysis(request):
 
     try:
         result = subprocess.run(
-            ['python', 'main.py', '--mode', 'video', '--video', temp_video_path, '--confidence', '0.5'],
+            ['python3', 'main.py', '--mode', 'video', '--video', temp_video_path, '--confidence', '0.5'],
             cwd=settings.VIDEO_ANALYSIS_SCRIPT_DIR,
             capture_output=True,
             text=True,
