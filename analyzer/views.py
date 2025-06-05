@@ -99,6 +99,11 @@ def generate_analysis(request):
             errors='ignore'
         )
 
+        print("=== STDOUT ===")
+        print(result.stdout)
+        print("=== STDERR ===")
+        print(result.stderr)
+
         if result.returncode != 0:
             return JsonResponse({
                 'error': 'Video analysis failed',
