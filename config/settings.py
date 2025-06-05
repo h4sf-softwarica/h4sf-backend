@@ -145,5 +145,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 INSTALLED_APPS += ['corsheaders']
 MIDDLEWARE = ['corsheaders.middleware.CorsMiddleware'] + MIDDLEWARE
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Instead of allowing all origins, specify only the allowed ones:
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = [
+    "https://freezoscan.rajeshthapa69.com.np",
+    "https://rajeshthapa69.com.np",
+    # Add more trusted origins if needed
+]
 
