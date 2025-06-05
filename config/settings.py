@@ -14,42 +14,41 @@ from pathlib import Path
 import environ
 import os
 
+# Base directory setup
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Initialize environment variables
 env = environ.Env(
-    # Set default values and types
     DEBUG=(bool, False)
 )
 
 # Read .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+# Basic settings
 DEBUG = env('DEBUG')
 SECRET_KEY = env('SECRET_KEY')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
-# Use env variables for custom paths
-VIDEO_ANALYSIS_SCRIPT_DIR = env('VIDEO_ANALYSIS_SCRIPT_DIR')
+# Use env variables for custom paths (cross-platform safe)
+VIDEO_ANALYSIS_SCRIPT_DIR = os.path.abspath(os.path.expanduser(env('VIDEO_ANALYSIS_SCRIPT_DIR')))
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Update BASE_DIR to Path object for consistency
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
+# Django default settings
 SECRET_KEY = 'django-insecure-pkn-&g%abu+5%ambila!_8abx7gkpfu$=x3wnn#^sxl)$v3eoi'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['rajeshthapa69.com.np', 'freezoscan.rajeshthapa69.com.np', 'api.rajeshthapa69.com.np', 'localhost', '127.0.0.1']
-
+ALLOWED_HOSTS = [
+    'rajeshthapa69.com.np',
+    'freezoscan.rajeshthapa69.com.np',
+    'api.rajeshthapa69.com.np',
+    'localhost',
+    '127.0.0.1'
+]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -58,9 +57,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'analyzer',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -89,10 +90,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -100,60 +98,34 @@ DATABASES = {
     }
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# Static files
 STATIC_URL = 'static/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+# Default auto field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# File upload limits (100MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600
 FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600
 
-INSTALLED_APPS += ['corsheaders']
-MIDDLEWARE = ['corsheaders.middleware.CorsMiddleware'] + MIDDLEWARE
-
-# Instead of allowing all origins, specify only the allowed ones:
+# CORS settings
 CORS_ALLOW_ALL_ORIGINS = False
-
 CORS_ALLOWED_ORIGINS = [
     "https://freezoscan.rajeshthapa69.com.np",
     "https://rajeshthapa69.com.np",
     # Add more trusted origins if needed
 ]
-
