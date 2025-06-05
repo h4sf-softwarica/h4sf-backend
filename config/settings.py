@@ -45,7 +45,7 @@ SECRET_KEY = 'django-insecure-pkn-&g%abu+5%ambila!_8abx7gkpfu$=x3wnn#^sxl)$v3eoi
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['rajeshthapa69.com.np', 'freezoscan.rajeshthapa69.com.np', 'api.rajeshthapa69.com.np', 'localhost', '127.0.0.1']
 
 
 # Application definition
