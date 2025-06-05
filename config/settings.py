@@ -142,6 +142,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600
+
 INSTALLED_APPS += ['corsheaders']
 MIDDLEWARE = ['corsheaders.middleware.CorsMiddleware'] + MIDDLEWARE
 
